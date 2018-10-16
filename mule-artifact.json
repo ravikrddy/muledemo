@@ -1,0 +1,34 @@
+{
+  "configs": [
+    "router.xml",
+    "errors.xml",
+    "config.xml",
+    "logic.xml",
+    "dynamic-service-registration.xml"
+  ],
+  "secureProperties": [],
+  "redeploymentEnabled": true,
+  "name": "mule4-skeleton-api",
+  "minMuleVersion": "4.1.1",
+  "requiredProduct": "MULE_EE",
+  "classLoaderModelLoaderDescriptor": {
+    "id": "mule",
+    "attributes": {
+      "exportedPackages": [
+      	"com.mule.consulting.dynamic_service"
+      ],
+      "exportedResources": [
+        "beans.xml",
+        "api/.gitignore",
+        "api/api.raml",
+        "api/examples/ping/get-response.json",
+        "api/examples/ping/put-request.json",
+        "api/examples/ping/put-response.json"
+      ]
+    }
+  },
+  "bundleDescriptorLoader": {
+    "id": "mule",
+    "attributes": {}
+  }
+}

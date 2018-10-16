@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:min-log="http://www.mulesoft.org/schema/mule/min-log"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/min-log http://www.mulesoft.org/schema/mule/min-log/current/mule-min-log.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+	<flow name="dynamic-service-registration.start">
+		<min-log:timed doc:name="Register API" >
+			<ee:transform doc:name="Transform Message" doc:id="cb651567-0023-4bfb-8e97-9cbb2dda9521" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"instance": {
+		"app": "${secure::register.appId}",
+		"hostName": "${secure::register.instanceId}",
+		"ipAddr": "${secure::register.ipAddress}",
+		"homePageUrl": "${secure::register.homePageUrl}",
+		"statusPageUrl": "${secure::register.statusPageUrl}",
+		"healthCheckUrl": "${secure::register.healthCheckUrl}",
+		"port": {
+			"\$": "${secure::api.port}" as Number,
+			"@enabled": true
+		},
+		"securePort": {
+			"\$": "${secure::api.securePort}" as Number,
+			"@enabled": true
+		},
+		"vipAddress": "${secure::register.vipAddress}",
+		"secureVipAddress": "${secure::register.secureVipAddress}",
+		"status": "UP",
+		"dataCenterInfo": {
+			"@class": "com.netflix.appinfo.InstanceInfo\$DefaultDataCenterInfo",
+			"name": "MyOwn"
+		}
+	}
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<http:request method="POST" doc:name="Request" doc:id="d5670761-ecfc-4a87-9ced-782724f0d970" config-ref="Dynamic_Service_Registry_Configuration" path="/${secure::register.appId}"/>
+			<logger level="INFO" doc:name="Logger" doc:id="56bc401c-0d7e-4147-8d82-d89a09b1059b" message="#[payload]"/>
+			<logger level="INFO" doc:name="Logger" doc:id="8c177ef2-894b-49f3-9452-42945bf98ade" message="#[message]"/>
+		</min-log:timed>
+	</flow>
+	
+	<flow name="dynamic-service-registration.stop"  >
+		<min-log:timed doc:name="Deregister API" >
+			<ee:transform doc:name="Transform Message" doc:id="cb651567-0023-4bfb-8e97-9cbb2dda9521" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"instance": {
+		"app": "${secure::register.appId}",
+		"hostName": "${secure::register.instanceId}",
+		"ipAddr": "${secure::register.ipAddress}",
+		"homePageUrl": "${secure::register.homePageUrl}",
+		"statusPageUrl": "${secure::register.statusPageUrl}",
+		"healthCheckUrl": "${secure::register.healthCheckUrl}",
+		"port": {
+			"\$": "${secure::api.port}" as Number,
+			"@enabled": true
+		},
+		"securePort": {
+			"\$": "${secure::api.securePort}" as Number,
+			"@enabled": true
+		},
+		"vipAddress": "${secure::register.vipAddress}",
+		"secureVipAddress": "${secure::register.secureVipAddress}",
+		"status": "DOWN",
+		"dataCenterInfo": {
+			"@class": "com.netflix.appinfo.InstanceInfo\$DefaultDataCenterInfo",
+			"name": "MyOwn"
+		}
+	}
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<http:request method="POST" doc:name="Request" doc:id="d5670761-ecfc-4a87-9ced-782724f0d970" config-ref="Dynamic_Service_Registry_Configuration" path="/${secure::register.appId}"/>
+			<logger level="INFO" doc:name="Logger" doc:id="56bc401c-0d7e-4147-8d82-d89a09b1059b" message="#[payload]"/>
+			<logger level="INFO" doc:name="Logger" doc:id="8c177ef2-894b-49f3-9452-42945bf98ade" message="#[message]"/>
+		</min-log:timed>
+	</flow>
+	
+	<flow name="dynamic-service-registration.heartbeat"  initialState="stopped">
+		<scheduler doc:name="Scheduler" doc:id="21828feb-b570-4fb0-83b3-4af008fcf844" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="${secure::serviceRegistry.heartbeatMS}"/>
+			</scheduling-strategy>
+		</scheduler>
+		<http:request method="PUT" doc:name="Request" doc:id="8334cc5e-440d-4de6-affb-9cc864634b2a" path="/${secure::register.appId}/${secure::register.instanceId}" config-ref="Dynamic_Service_Registry_Configuration">
+			<http:response-validator >
+				<http:success-status-code-validator values="200,404" />
+			</http:response-validator>
+		</http:request>
+		<choice doc:name="Choice" doc:id="13bc9f24-ac05-4e05-9b08-1974469297f4" >
+			<when expression="#[attributes.statusCode == 404]" >
+				<flow-ref doc:name="dynamic-service-registration.start" doc:id="44a7295b-1f59-49aa-b9e6-d15ff33b3f2d" name="dynamic-service-registration.start"/>
+			</when>
+			<otherwise >
+				<logger level="DEBUG" doc:name="Logger" doc:id="36ca00b5-32fa-45ce-bd4f-95034acc2d8d" message="lub dub"/>
+			</otherwise>
+		</choice>
+	</flow>
+	
+</mule>
